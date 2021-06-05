@@ -4,7 +4,7 @@ Sometimes, [SORT](https://arxiv.org/abs/1602.00763) with Kalman filter isn't sim
 
 ## Usage
 
-```
+```python
 tracker = SSort(init_step=3, min_hit=5, max_mis=15, cost_threshold=4)
 while True:
     # Get your detections here

@@ -10,6 +10,7 @@ Sometimes, [SORT](https://arxiv.org/abs/1602.00763) with Kalman filter isn't sim
 # max_mis: Tracks with this or larger number of consecutive misdetection are discarded
 # min_cost_threshold: Cost threshold for the most recent updated track
 # max_cost_threshold: Cost threshold for the most out-of-date track
+# You MUST change these parameters to fit your problem
 tracker = SSort(init_step=3, min_hit=5, max_mis=12, min_cost_threshold=0.66, max_cost_threshold=0.99)
 while True:
     # Get your detections here

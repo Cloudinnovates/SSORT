@@ -1,15 +1,14 @@
-import math
-
-from .track import Track
+from track import Track
 
 
 class SSort:
 
-    def __init__(self, init_step=3, min_hit=5, max_mis=15, cost_threshold=4):
+    def __init__(self, init_step=3, min_hit=5, max_mis=10, min_cost_threshold=0.66, max_cost_threshold=0.99):
         self.init_step = init_step
         self.min_hit = min_hit
         self.max_mis = max_mis
-        self.cost_threshold = cost_threshold
+        self.min_cost_threshold = min_cost_threshold
+        self.max_cost_threshold = max_cost_threshold
         self.tracks = []
         self.next_track_id = 0
 
@@ -48,23 +47,26 @@ class SSort:
         n_track = len(self.tracks)
         n_detection = len(detections)
         matched_pairs = []
-        unmatched_tracks = list(range(n_track))
         unmatched_detections = list(range(n_detection))
+        unmatched_confirmed_tracks = [t for t in range(n_track) if self.tracks[t].age >= self.init_step]
+        unmatched_unconfirmed_tracks = [t for t in range(n_track) if self.tracks[t].age < self.init_step]
+
+        # Matching confirmed tracks
         for depth in range(self.max_mis+1):
-            if len(unmatched_detections) == 0 or len(unmatched_tracks) == 0:
+            cost_threshold = self.min_cost_threshold + depth * (self.max_cost_threshold - self.min_cost_threshold) / self.max_mis
+            if len(unmatched_detections) == 0 or len(unmatched_confirmed_tracks) == 0:
                 # completed
                 break
-            this_level_tracks = [t for t in range(
-                n_track) if self.tracks[t].n_consecutive_mis == depth]
+            this_level_tracks = [t for t in unmatched_confirmed_tracks if self.tracks[t].n_consecutive_mis == depth]
             if len(this_level_tracks) == 0:
                 # nothing to do at this level
                 continue
-            # I do not use Hungarian algorithm because it's not simple and fast. I use a simple greedy algorithm
+            # I don't use Hungarian algorithm because it's not simple and fast. I use a simple greedy algorithm
             cost_pairs = []
             for d in unmatched_detections:
                 for t in this_level_tracks:
                     cost = SSort._cost_function(self.tracks[t], detections[d])
-                    if cost <= self.cost_threshold:
+                    if cost <= cost_threshold:
                         cost_pairs.append((t, d, cost))
             cost_pairs = sorted(cost_pairs, key=lambda item: item[2])
             matched_d = set()
@@ -74,26 +76,48 @@ class SSort:
                     matched_t.add(t)
                     matched_d.add(d)
                     matched_pairs.append((t, d))
-            unmatched_tracks = [
-                t for t in unmatched_tracks if t not in matched_t]
+            unmatched_confirmed_tracks = [
+                t for t in unmatched_confirmed_tracks if t not in matched_t]
             unmatched_detections = [
                 d for d in unmatched_detections if d not in matched_d]
 
+        # Matching unconfirmed tracks
+        if len(unmatched_detections) > 0 and len(unmatched_unconfirmed_tracks) > 0:
+            cost_pairs = []
+            for d in unmatched_detections:
+                for t in unmatched_unconfirmed_tracks:
+                    cost = SSort._cost_function(self.tracks[t], detections[d])
+                    if cost <= self.min_cost_threshold:
+                        cost_pairs.append((t, d, cost))
+            cost_pairs = sorted(cost_pairs, key=lambda item: item[2])
+            matched_d = set()
+            matched_t = set()
+            for t, d, cost in cost_pairs:
+                if t not in matched_t and d not in matched_d:
+                    matched_t.add(t)
+                    matched_d.add(d)
+                    matched_pairs.append((t, d))
+            unmatched_unconfirmed_tracks = [
+                t for t in unmatched_unconfirmed_tracks if t not in matched_t]
+            unmatched_detections = [
+                d for d in unmatched_detections if d not in matched_d]
+
+        unmatched_tracks = unmatched_confirmed_tracks + unmatched_unconfirmed_tracks
         return matched_pairs, unmatched_tracks, unmatched_detections
 
     @staticmethod
     def _cost_function(track, detection):
-        x1, y1, x2, y2 = detection[:4]
-        x = (x1 + x2) / 2
-        y = (y1 + y2) / 2
-        w = x2 - x1
-        h = y2 - y1
-        s = (w + h) / 2
-        tx, ty, tw, th = track.x, track.y, track.w, track.h
-        ts = (tw + th) / 2
-        avg_size = (s + ts) / 2
-        distance = math.sqrt((x-tx)**2 + (y-ty)**2)
-        distance = distance / avg_size
-        w_ratio = w / tw - 1 if w > tw else tw / w - 1
-        h_ratio = h / th - 1 if h > th else th / h - 1
-        return 0.5 * distance + 0.25 * w_ratio + 0.25 * h_ratio
+        # We use IOU to calculate cost.
+        # You can use class_id as an additional input to calculate the cost or you can come up with your own cost function
+        dx1, dy1, dx2, dy2 = detection[:4]
+        tx1, ty1, tx2, ty2 = track.get_box()
+        x1 = max(dx1, tx1)
+        x2 = min(dx2, tx2)
+        y1 = max(dy1, ty1)
+        y2 = min(dy2, ty2)
+        if x1 >= x2 or y1 >= y2:
+            return 1
+        s_i = (x2 - x1) * (y2 - y1)
+        s_u = (dx2 - dx1) * (dy2 - dy1) + (tx2 - tx1) * (ty2 - ty1) - s_i
+        iou = s_i / s_u
+        return 1 - iou

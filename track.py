@@ -31,6 +31,7 @@ class Track:
         w = detection[2] - detection[0]
         h = detection[3] - detection[1]
 
+        # You may want to change all these weights to fit your problem
         self.x = 0.75 * x + 0.25 * self.x
         self.y = 0.75 * y + 0.25 * self.y
         self.w = 0.25 * w + 0.75 * self.w
@@ -43,8 +44,8 @@ class Track:
         vx = x - lx
         vy = y - ly
         if self.vx is not None and self.vy is not None:
-            self.vx = 0.1 * vx + 0.9 * self.vx
-            self.vy = 0.1 * vy + 0.9 * self.vy
+            self.vx = 0.05 * vx + 0.95 * self.vx
+            self.vy = 0.05 * vy + 0.95 * self.vy
         else:
             self.vx = vx
             self.vy = vy

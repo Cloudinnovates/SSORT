@@ -57,8 +57,6 @@ if __name__ == '__main__':
         for tid, detection in zip(tracks_id, detections):
             x1, y1, x2, y2 = [int(v) for v in detection[:4]]
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-            # cv2.putText(frame, str(tid), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX,
-            #             0.5, (0, 0, 255), 1, cv2.LINE_AA)
 
         for track in tracker.tracks:
             x1, y1, x2, y2 = [int(v) for v in track.get_box()]

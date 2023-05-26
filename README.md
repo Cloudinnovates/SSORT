@@ -5,20 +5,16 @@ Sometimes, [SORT](https://arxiv.org/abs/1602.00763) with Kalman filter isn't sim
 ## Usage
 
 ```python
-# init_step: Minimum age of a track to be considered confirmed. At this stage, any misdetection will make the track be discarded
-# min_hit: Minimum number of detection for a track. Tracks with smaller number of detection are ignored
-# max_mis: Tracks with this or larger number of consecutive misdetection are discarded
-# min_cost_threshold: Cost threshold for the most recent updated track
-# max_cost_threshold: Cost threshold for the most out-of-date track
+# init_step: Minimum age of a track to be considered confirmed. At early stage, any misdetection will make this track be deleted
+# max_mis: Tracks with this or larger number of consecutive misdetection are deleted
+# min_iou: Minimum IOU between detection box and track's internal state box
+# padding_ratio: Box are enlarged to have better IOU
 # You MUST change these parameters to fit your problem
-tracker = SSort(init_step=3, min_hit=5, max_mis=12, min_cost_threshold=0.66, max_cost_threshold=0.99)
+tracker = SSort(init_step=3, max_mis=10, min_iou=0.1, padding_ratio=0.25)
 while True:
     # Get your detections here
     # detections is a list of boxes, each box is in form [x1, y1, x2, y2, conf, class_id]
     detections = ...
-
-    # Forward tracker's state to the next step
-    tracker.forward()
 
     # Match tracker's internal state with observations
     # observed_tracks: confirmed tracks that are matched with detections

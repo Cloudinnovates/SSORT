@@ -1,4 +1,3 @@
 # only for demo purpose
 opencv-python
-torchvision
 yolov5
